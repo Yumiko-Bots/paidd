@@ -1,5 +1,6 @@
-from pyrogram import filters, InlineKeyboardButton, InlineKeyboardMarkup, UserNotParticipant
-from pyrogram.types import Message
+
+from pyrogram import filters, Client 
+from pyrogram.types import Message, InlineKeyboardButton, InlineKeyboardMarkup, UserNotParticipant
 from plugins import corn 
 
 force_channel = "-1001947211484"
