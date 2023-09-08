@@ -40,12 +40,13 @@ async def start(corn, message: Message):
 async def about_callback(client, CallbackQuery):
     await CallbackQuery.edit_message_text(
         text="<b><u>About</u></b>\n\n<b>➺Bot Name:</b>Corn star\n<b>➺Language:</b>[python](https://python.org)\n<b>➺Library:</b>[pyrogram](https://pyrogram.org)\n<b>➺Devloped By:</b>[Nobitha](t.me/my_name_is_nobitha)", 
+        disable_web_page_preview=True,    
         reply_markup=about_keyboard,
     )    
 
 @corn.on_callback_query(filters.regex("start"))
 async def start_callback(client, CallbackQuery):
     await CallbackQuery.edit_message_text(
-        text=f"Hello {message.from_user.mention}\n\nI am a private files save bot. I can save private files on certain channels, and other users can access them from a special link.", 
+        text=f"Hello {CallbackQuery.message.from_user.mention}\n\nI am a private files save bot. I can save private files on certain channels, and other users can access them from a special link.", 
         reply_markup=start_keyboard,
     )
