@@ -1,7 +1,8 @@
 
 from pyrogram import filters, Client 
-from pyrogram.types import Message, InlineKeyboardButton, InlineKeyboardMarkup, UserNotParticipant
+from pyrogram.types import Message, InlineKeyboardButton, InlineKeyboardMarkup
 from plugins import corn 
+from pyrogram.errors.exceptions import UserNotParticipant
 
 force_channel = "-1001947211484"
 
