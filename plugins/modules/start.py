@@ -5,13 +5,15 @@ from plugins import corn
 from pyrogram.errors.exceptions import UserNotParticipant
 
 force_channel = -1001947211484
+
 start_keyboard = InlineKeyboardMarkup( [
         InlineKeyboardButton("Updates", url="t.me/everymms_original"),
-        InlineKeyboardButton(Vip", url="t.me/VIP_MEMBERSHIP_OFFICIAL"),
+        InlineKeyboardButton("Vip", url="t.me/VIP_MEMBERSHIP_OFFICIAL"),
         ],[
         InlineKeyboardButton("About", callback_data="about")
         ]
         )
+        
 about_keyboard = InlineKeyboardMarkup( [
        InlineKeyboardButton("⇦Back", callback_data="start")
        ]
