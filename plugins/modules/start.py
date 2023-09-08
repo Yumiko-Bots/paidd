@@ -16,7 +16,7 @@ async def start(corn, message: Message):
                 return
         except UserNotParticipant:
             keyboard = InlineKeyboardMarkup([
-                [InlineKeyboardButton("Join Channel", url=f"https://t.me/{force_channel}")]
+                [InlineKeyboardButton("Join Channel", url=f"https://t.me/+sKCMDPJoao1Mjc9")]
             ])
             await message.reply_text("You are not joined in my channel. Please join the channel to use me.", reply_markup=keyboard)
             return
