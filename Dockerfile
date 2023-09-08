@@ -5,5 +5,5 @@ COPY . /app
  
 RUN pip install -r pip.txt
  
-ENTRYPOINT ["python3"]
+ENTRYPOINT ["python"]
 CMD python3 -m plugins
