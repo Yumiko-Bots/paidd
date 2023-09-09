@@ -3,6 +3,7 @@ from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
 import base64
 import re
 import pyromod
+from pyromod import listen
 from plugins import corn 
 
 SUDO_USERS = [5954494174, 5857041668]
