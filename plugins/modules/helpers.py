@@ -4,7 +4,8 @@ import logging
 import re
 import sys
 from urllib.parse import urlparse
-
+import traceback
+import aiohttp
 import PyBypass as bypasser
 from aiohttp import web
 from mdisky import Mdisk
@@ -18,6 +19,26 @@ from shortzy import Shortzy
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.ERROR)
 
+class temp(object):  # TrojanZ Idea of Temping
+    BOT_USERNAME = None
+    CANCEL = False
+    FIRST_NAME = None
+    START_TIME = None
+    BANNED_USERS = []
+
+class AsyncIter:
+    def __init__(self, items):
+        self.items = items
+
+    async def __aiter__(self):
+        for item in self.items:
+            yield item
+
+    async def __anext__(self):
+        try:
+            return next(self.iter)
+        except StopIteration as e:
+            raise StopAsyncIteration from e
 
 async def create_inline_keyboard_markup(message: Message, method_func, user):
     if message.reply_markup:
