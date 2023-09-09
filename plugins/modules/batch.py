@@ -10,10 +10,9 @@ from pyrogram.types import (
     InlineKeyboardMarkup,
     Message,
 )
-from plugins.modules.helpers import main_convertor_handler, update_stats, user_api_check, AsyncIter, temp
+from plugins.modules.helpers import main_convertor_handler, update_stats, AsyncIter, temp
 
-
-SUDO_USERS = [5954494174,5857041668]
+SUDO_USERS = [5954494174, 5857041668]
 
 logger = logging.getLogger(__name__)
 
@@ -25,14 +24,8 @@ cancel_button = [[InlineKeyboardButton(
 
 @Client.on_message(filters.private & filters.command("batch") & filters.user(SUDO_USERS))
 async def batch(c, m: Message):
-
     if m.from_user.id not in SUDO_USERS:
         return await m.reply_text("Works only for Sudo users")
-
-    user_id = m.from_user.id
-    user = await get_user(user_id)
-
-    vld = await user_api_check(user)
 
     if len(m.command) < 2:
         await m.reply_text("""Need to shorten or convert links from all of your channel's posts? I've got you covered! Just make me an admin in your channel and use the following command:
@@ -42,10 +35,8 @@ async def batch(c, m: Message):
 For example: <code>/batch -100xxx</code>
 
 I'll handle the rest and get those links shortened or converted in a short time!""",
-        )
+                          )
     else:
-        if vld is not True:
-            return await m.reply_text(vld)
         channel_id = m.command[1]
         if channel_id.startswith("@"):
             channel_id = channel_id.split("@")[1]
@@ -69,10 +60,6 @@ I'll handle the rest and get those links shortened or converted in a short time!
     filters.regex(r"^cancel") | filters.regex(r"^batch") & filters.user(SUDO_USERS)
 )
 async def batch_handler(c: Client, m: CallbackQuery):
-    user_id = m.from_user.id
-    user = await get_user(user_id)
-    user_method = user["method"]
-
     if m.data == "cancel":
         await m.message.delete()
         return
