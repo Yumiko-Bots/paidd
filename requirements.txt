@@ -3,3 +3,4 @@ TgCrypto
 asyncio
 motor
 pymongo[srv]
+pyromod
