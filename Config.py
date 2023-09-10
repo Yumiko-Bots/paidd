@@ -32,4 +32,5 @@ class config:
     SUDO_USERS.append(OWNER_ID) if OWNER_ID not in SUDO_USERS else []
     DATABASE_NAME = os.environ.get("DATABASE_NAME", "cluster0")
     DATABASE_URL = os.environ.get("DATABASE_URL", "mongodb+srv://Amala203145:Amala2031456@cluster0.t9ibfge.mongodb.net/?retryWrites=true&w=majority")  
-
+    BOT_USERNAME = os.environ.get("BOT_USERNAME", "fuckedusernamesbot")
+	DB_CHANNEL = int(os.environ.get("DB_CHANNEL", "-1001947211484"))
