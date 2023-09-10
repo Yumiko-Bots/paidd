@@ -7,4 +7,5 @@ class config:
     BOT_TOKEN = "6265217004:AAE_yot4SqUFrvBa1IJXgRy-kaeZm9z3Xwk"
 
     SUDO_USERS = 5954494174
-    MONGO_URI = 'mongodb+srv://marcopetrali657:marcopetrali657@cluster0.dwztggn.mongodb.net/?retryWrites=true&w=majority'
+    DATABASE_URL = 'mongodb+srv://marcopetrali657:marcopetrali657@cluster0.dwztggn.mongodb.net/?retryWrites=true&w=majority'
+    DATABASE_NAME = "marcopetrali657"
