@@ -1,163 +1,143 @@
 import asyncio
-import datetime
-import logging
-from database.users import get_user
-from pyrogram import Client, filters
-from pyrogram.errors import ChatWriteForbidden, PeerIdInvalid, FloodWait
+from Config import config as Config
+from pyrogram import Client
 from pyrogram.types import (
-    CallbackQuery,
-    InlineKeyboardButton,
-    InlineKeyboardMarkup,
     Message,
+    InlineKeyboardMarkup,
+    InlineKeyboardButton
 )
-from plugins.modules.helpers import main_convertor_handler, update_stats, AsyncIter, temp
-
-SUDO_USERS = [5954494174, 5857041668]
-
-logger = logging.getLogger(__name__)
-
-lock = asyncio.Lock()
-
-cancel_button = [[InlineKeyboardButton(
-    "Cancel 🔐", callback_data="cancel_process")]]
+from pyrogram.errors import FloodWait
+from base64 import standard_b64encode, standard_b64decode
 
 
-@Client.on_message(filters.private & filters.command("batch") & filters.user(SUDO_USERS))
-async def batch(c, m: Message):
-    if m.from_user.id not in SUDO_USERS:
-        return await m.reply_text("Works only for Sudo users")
+def str_to_b64(__str: str) -> str:
+    str_bytes = __str.encode('ascii')
+    bytes_b64 = standard_b64encode(str_bytes)
+    b64 = bytes_b64.decode('ascii')
+    return b64
 
-    if len(m.command) < 2:
-        await m.reply_text("""Need to shorten or convert links from all of your channel's posts? I've got you covered! Just make me an admin in your channel and use the following command:
 
-<code>/batch [channel id or username]</code>
+def b64_to_str(b64: str) -> str:
+    bytes_b64 = b64.encode('ascii')
+    bytes_str = standard_b64decode(bytes_b64)
+    __str = bytes_str.decode('ascii')
+    return __str
 
-For example: <code>/batch -100xxx</code>
 
-I'll handle the rest and get those links shortened or converted in a short time!""",
-                          )
-    else:
-        channel_id = m.command[1]
-        if channel_id.startswith("@"):
-            channel_id = channel_id.split("@")[1]
-
-        buttons = [
-            [
-                InlineKeyboardButton(
-                    "Batch Short 🏕", callback_data=f"batch#{channel_id}"
+async def forward_to_channel(bot: Client, message: Message, editable: Message):
+    try:
+        __SENT = await message.forward(Config.DB_CHANNEL)
+        return __SENT
+    except FloodWait as sl:
+        if sl.value > 45:
+            await asyncio.sleep(sl.value)
+            await bot.send_message(
+                chat_id=int(Config.LOG_CHANNEL),
+                text=f"#FloodWait:\nGot FloodWait of `{str(sl.value)}s` from `{str(editable.chat.id)}` !!",
+                disable_web_page_preview=True,
+                reply_markup=InlineKeyboardMarkup(
+                    [
+                        [InlineKeyboardButton("Ban User", callback_data=f"ban_user_{str(editable.chat.id)}")]
+                    ]
                 )
-            ],
-            [InlineKeyboardButton("Cancel 🔐", callback_data="cancel")],
-        ]
+            )
+        return await forward_to_channel(bot, message, editable)
 
-        return await m.reply(
-            text=f"Are you sure you want to batch short?\n\nChannel: {channel_id}",
-            reply_markup=InlineKeyboardMarkup(buttons),
+
+async def save_batch_media_in_channel(bot: Client, editable: Message, message_ids: list):
+    try:
+        message_ids_str = ""
+        for message in (await bot.get_messages(chat_id=editable.chat.id, message_ids=message_ids)):
+            sent_message = await forward_to_channel(bot, message, editable)
+            if sent_message is None:
+                continue
+            message_ids_str += f"{str(sent_message.id)} "
+            await asyncio.sleep(2)
+        SaveMessage = await bot.send_message(
+            chat_id=Config.DB_CHANNEL,
+            text=message_ids_str,
+            disable_web_page_preview=True,
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton("Delete Batch", callback_data="closeMessage")
+            ]])
+        )
+        share_link = f"https://t.me/{Config.BOT_USERNAME}?start=AbirHasan2005_{str_to_b64(str(SaveMessage.id))}"
+        await editable.edit(
+            f"**Batch Files Stored in my Database!**\n\nHere is the Permanent Link of your files: {share_link} \n\n"
+            f"Just Click the link to get your files!",
+            reply_markup=InlineKeyboardMarkup(
+                [[InlineKeyboardButton("Open Link", url=share_link)],
+                 [InlineKeyboardButton("Bots Channel", url="https://t.me/Discovery_Updates"),
+                  InlineKeyboardButton("Support Group", url="https://t.me/JoinOT")]]
+            ),
+            disable_web_page_preview=True
+        )
+        await bot.send_message(
+            chat_id=int(Config.LOG_CHANNEL),
+            text=f"#BATCH_SAVE:\n\n[{editable.reply_to_message.from_user.first_name}](tg://user?id={editable.reply_to_message.from_user.id}) Got Batch Link!",
+            disable_web_page_preview=True,
+            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Open Link", url=share_link)]])
+        )
+    except Exception as err:
+        await editable.edit(f"Something Went Wrong!\n\n**Error:** `{err}`")
+        await bot.send_message(
+            chat_id=int(Config.LOG_CHANNEL),
+            text=f"#ERROR_TRACEBACK:\nGot Error from `{str(editable.chat.id)}` !!\n\n**Traceback:** `{err}`",
+            disable_web_page_preview=True,
+            reply_markup=InlineKeyboardMarkup(
+                [
+                    [InlineKeyboardButton("Ban User", callback_data=f"ban_user_{str(editable.chat.id)}")]
+                ]
+            )
         )
 
 
-@Client.on_callback_query(
-    filters.regex(r"^cancel") | filters.regex(r"^batch") & filters.user(SUDO_USERS)
-)
-async def batch_handler(c: Client, m: CallbackQuery):
-    if m.data == "cancel":
-        await m.message.delete()
-        return
-    elif m.data.startswith("batch"):
-        if lock.locked():
-            return await m.answer(
-                "Wait until previous process complete.", show_alert=True
-            )
-
-        channel_id = int(m.data.split("#")[1])
-        try:
-            txt = await c.send_message(channel_id, ".")
-            id = txt.id
-            await txt.delete()
-
-        except ChatWriteForbidden:
-            return await m.message.edit("Bot is not an admin in the given channel")
-        except PeerIdInvalid:
-            return await m.message.edit("Given channel ID is invalid")
-        except Exception as e:
-            logging.exception(e)
-            return await m.message.edit(e)
-
-        start_time = datetime.datetime.now()
-        txt = await m.message.edit(
-            text=f"Batch Shortening Started!\n\n Channel: {channel_id}\n\nTo Cancel /cancel",
+async def save_media_in_channel(bot: Client, editable: Message, message: Message):
+    try:
+        forwarded_msg = await message.forward(Config.DB_CHANNEL)
+        file_er_id = str(forwarded_msg.id)
+        await forwarded_msg.reply_text(
+            f"#PRIVATE_FILE:\n\n[{message.from_user.first_name}](tg://user?id={message.from_user.id}) Got File Link!",
+            disable_web_page_preview=True)
+        share_link = f"https://t.me/{Config.BOT_USERNAME}?start=AbirHasan2005_{str_to_b64(file_er_id)}"
+        await editable.edit(
+            "**Your File Stored in my Database!**\n\n"
+            f"Here is the Permanent Link of your file: {share_link} \n\n"
+            "Just Click the link to get your file!",
+            reply_markup=InlineKeyboardMarkup(
+                [[InlineKeyboardButton("Open Link", url=share_link)],
+                 [InlineKeyboardButton("Bots Channel", url="https://t.me/Discovery_Updates"),
+                  InlineKeyboardButton("Support Group", url="https://t.me/JoinOT")]]
+            ),
+            disable_web_page_preview=True
         )
-        logger.info(f"Batch Shortening Started for {channel_id}")
-
-        success = 0
-        fail = 0
-        total = 0
-        empty = 0
-
-        total_messages = range(1, id)
-        temp.CANCEL = False
-        try:
-            for i in range(0, len(total_messages), 200):
-                channel_posts = AsyncIter(
-                    await c.get_messages(channel_id, total_messages[i: i + 200])
+    except FloodWait as sl:
+        if sl.value > 45:
+            print(f"Sleep of {sl.value}s caused by FloodWait ...")
+            await asyncio.sleep(sl.value)
+            await bot.send_message(
+                chat_id=int(Config.LOG_CHANNEL),
+                text="#FloodWait:\n"
+                     f"Got FloodWait of `{str(sl.value)}s` from `{str(editable.chat.id)}` !!",
+                disable_web_page_preview=True,
+                reply_markup=InlineKeyboardMarkup(
+                    [
+                        [InlineKeyboardButton("Ban User", callback_data=f"ban_user_{str(editable.chat.id)}")]
+                    ]
                 )
-                if temp.CANCEL:
-                    break
-                async with lock:
-                    async for message in channel_posts:
-                        if temp.CANCEL:
-                            break
-                        if message.text or message.caption:
-                            try:
-                                await main_convertor_handler(
-                                    message=message,
-                                    edit_caption=True,
-                                    user=user,
-                                )
-                            except FloodWait as e:
-                                await asyncio.sleep(e.value)
-                                await main_convertor_handler(
-                                    message=message,
-                                    edit_caption=True,
-                                    user=user,
-                                )
-
-                            except Exception as e:
-                                logger.error(e, exc_info=True)
-                                fail += 1
-                            success += 1
-                            await update_stats(message, user_method)
-
-                            await asyncio.sleep(1)
-                        else:
-                            empty += 1
-                        total += 1
-
-                        if total % 10 == 0:
-                            msg = f"Batch Shortening in Process !\n\nTotal: {total}\nSuccess: {success}\nFailed: {fail}\nEmpty: {empty}\n\nTo cancel the batch: /cancel"
-                            await txt.edit(msg)
-        except Exception as e:
-            logger.error(e, exc_info=True)
-            await m.message.reply(
-                f"Error Occured while processing batch: `{e.message}`"
             )
-        finally:
-            end_time = datetime.datetime.now()
-            await asyncio.sleep(10)
-            t = end_time - start_time
-            time_taken = str(datetime.timedelta(seconds=t.seconds))
-            msg = f"Batch Shortening Completed!\n\nTime Taken - `{time_taken}`\n\nTotal: `{total}`\nSuccess: `{success}`\nFailed: `{fail}`\nEmpty: `{empty}`"
-            await txt.edit(msg)
-            logger.info(f"Batch Shortening Completed for {channel_id}")
-
-
-@Client.on_message(filters.private & filters.command("cancel") & filters.user(SUDO_USERS))
-async def stop_button(c, m):
-    temp.CANCEL = True
-    msg = await c.send_message(
-        text="<i>Trying To Stoping.....</i>", chat_id=m.chat.id
-    )
-
-    await asyncio.sleep(5)
-    await msg.edit("Batch Shortening Stopped Successfully 👍")
-    logger.info("Batch Shortening Stopped Successfully 👍")
+        await save_media_in_channel(bot, editable, message)
+    except Exception as err:
+        await editable.edit(f"Something Went Wrong!\n\n**Error:** `{err}`")
+        await bot.send_message(
+            chat_id=int(Config.LOG_CHANNEL),
+            text="#ERROR_TRACEBACK:\n"
+                 f"Got Error from `{str(editable.chat.id)}` !!\n\n"
+                 f"**Traceback:** `{err}`",
+            disable_web_page_preview=True,
+            reply_markup=InlineKeyboardMarkup(
+                [
+                    [InlineKeyboardButton("Ban User", callback_data=f"ban_user_{str(editable.chat.id)}")]
+                ]
+            )
+        )
