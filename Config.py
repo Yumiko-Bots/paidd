@@ -21,11 +21,7 @@ class config:
     API_ID = "8623612"
     API_HASH = "06ea2889c5517eb64017b032d667e29f"
     BOT_TOKEN = "6265217004:AAE_yot4SqUFrvBa1IJXgRy-kaeZm9z3Xwk"
-
     SUDO_USERS = 5954494174, 5857041668
-    DATABASE_URL = 'mongodb+srv://marcopetrali657:marcopetrali657@cluster0.dwztggn.mongodb.net/?retryWrites=true&w=majority'
-    DATABASE_NAME = "marcopetrali657"
-
     CHANNELS = is_enabled((os.environ.get("CHANNELS", "True")), True)
     CHANNEL_ID = (
         [int(i.strip()) for i in os.environ.get("CHANNEL_ID", "-1001947211484").split(" ")]
@@ -34,4 +30,6 @@ class config:
     )
     OWNER_ID = int(os.environ.get("OWNER_ID", "5857041668"))
     SUDO_USERS.append(OWNER_ID) if OWNER_ID not in SUDO_USERS else []
+    DATABASE_NAME = os.environ.get("DATABASE_NAME", "cluster0")
+    DATABASE_URL = os.environ.get("DATABASE_URL", "mongodb+srv://marcopetrali657:marcopetrali657@cluster0.dwztggn.mongodb.net/?retryWrites=true&w=majority")  
 
