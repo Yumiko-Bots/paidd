@@ -34,6 +34,6 @@ class config:
     DATABASE_URL = os.environ.get("DATABASE_URL", "mongodb+srv://Amala203145:Amala2031456@cluster0.t9ibfge.mongodb.net/?retryWrites=true&w=majority")  
     BOT_USERNAME = os.environ.get("BOT_USERNAME", "fuckedusernamesbot")
     DB_CHANNEL = int(os.environ.get("DB_CHANNEL", "-1001947211484"))
-    LOG_CHANNEL = int(environ.get('LOG_CHANNEL', "-1001947211484"))
-    FILE_STORE_CHANNEL = [int(ch) for ch in (environ.get('FILE_STORE_CHANNEL', '-1001947211484')).split()]
-    PUBLIC_FILE_STORE = is_enabled(environ.get('PUBLIC_FILE_STORE', "True"), True)
+    LOG_CHANNEL = int(os.environ.get('LOG_CHANNEL', "-1001947211484"))
+    FILE_STORE_CHANNEL = [int(ch) for ch in (os.environ.get('FILE_STORE_CHANNEL', '-1001947211484')).split()]
+    PUBLIC_FILE_STORE = is_enabled(os.environ.get('PUBLIC_FILE_STORE', "True"), True)
