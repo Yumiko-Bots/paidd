@@ -24,8 +24,8 @@ class config:
     SUDO_USERS = 5954494174, 5857041668
     CHANNELS = is_enabled((os.environ.get("CHANNELS", "True")), True)
     CHANNEL_ID = (
-        [int(i.strip()) for i in os.environ.get("CHANNEL_ID", "-1001947211484").split(" ")]
-        if os.environ.get("CHANNEL_ID", "-1001947211484")
+        [int(i.strip()) for i in os.environ.get("CHANNEL_ID", "1001947211484").split(" ")]
+        if os.environ.get("CHANNEL_ID")
         else []
     )
     OWNER_ID = int(os.environ.get("OWNER_ID", "5857041668"))
