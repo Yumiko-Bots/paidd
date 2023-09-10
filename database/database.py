@@ -74,4 +74,4 @@ class Database:
         return banned_users
 
 
-db = Database(Config.DATABASE_URL)
+db = Database(Config.DATABASE_URL, Config.BOT_USERNAME)
