@@ -82,7 +82,7 @@ async def gen_link_batch(bot, message):
     # file store without db channel
     og_msg = 0
     tot = 0
-    async for msg in corn.iter_history(f_chat_id, l_msg_id, f_msg_id):
+    async for msg in corn.get_history(f_chat_id, l_msg_id, f_msg_id):
         tot += 1
         if msg.empty or msg.service:
             continue
