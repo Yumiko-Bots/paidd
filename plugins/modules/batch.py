@@ -4,7 +4,7 @@ from pyrogram.errors.exceptions.bad_request_400 import ChannelInvalid, UsernameI
 from Config import config
 from database.ia_filterdb import unpack_new_file_id
 from plugins import corn
-
+from pyrogram.types import Message
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -82,17 +82,17 @@ async def gen_link_batch(bot, message):
     og_msg = 0
     tot = 0
     messages = await corn.get_messages(f_chat_id, l_msg_id, f_msg_id)
-    for msg in messages:
+    for message in messages:
         tot += 1
-        if msg.empty or msg.service:
+        if message.empty or message.service:
             continue
-        if not msg.media:
+        if not message.media:
             # only media messages supported.
             continue
         try:
-            file_type = msg.media
-            file = getattr(msg, file_type.value)
-            caption = getattr(msg, 'caption', '')
+            file_type = message.media
+            file = getattr(message, file_type.value)
+            caption = getattr(message, 'caption', '')
             if caption:
                 caption = caption.html
             if file:
