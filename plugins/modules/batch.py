@@ -1,171 +1,120 @@
-import asyncio
-from Config import config as Config
-from pyrogram import Client
-from pyrogram.types import (
-    Message,
-    InlineKeyboardMarkup,
-    InlineKeyboardButton
-)
-from pyrogram.errors import FloodWait
-from base64 import standard_b64encode, standard_b64decode
+import re, os, json, base64, logging
+from pyrogram import filters, Client, enums
+from pyrogram.errors.exceptions.bad_request_400 import ChannelInvalid, UsernameInvalid, UsernameNotModified
+from Config import config
+from database.ia_filterdb import unpack_new_file_id
 
 
-def str_to_b64(__str: str) -> str:
-    str_bytes = __str.encode('ascii')
-    bytes_b64 = standard_b64encode(str_bytes)
-    b64 = bytes_b64.decode('ascii')
-    return b64
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
+async def allowed(_, __, message):
+    if config.PUBLIC_FILE_STORE:
+        return True
+    if message.from_user and message.from_user.id in config.SUDO_USERS:
+        return True
+    return False
 
-def b64_to_str(b64: str) -> str:
-    bytes_b64 = b64.encode('ascii')
-    bytes_str = standard_b64decode(bytes_b64)
-    __str = bytes_str.decode('ascii')
-    return __str
+@Client.on_message(filters.command(['link', 'plink']) & filters.create(allowed))
+async def gen_link_s(bot, message):
+    replied = message.reply_to_message
+    if not replied:
+        return await message.reply('Reply to a message to get a shareable link.')
+    file_type = replied.media
+    if file_type not in [enums.MessageMediaType.VIDEO, enums.MessageMediaType.AUDIO, enums.MessageMediaType.DOCUMENT]:
+        return await message.reply("Reply to a supported media")
+    if message.has_protected_content and message.chat.id not in config.SUDO_USERS:
+        return await message.reply("okDa")
+    file_id, ref = unpack_new_file_id((getattr(replied, file_type.value)).file_id)
+    string = 'filep_' if message.text.lower().strip() == "/plink" else 'file_'
+    string += file_id
+    outstr = base64.urlsafe_b64encode(string.encode("ascii")).decode().strip("=")
+    await message.reply(f"Here is your Link:\nhttps://t.me/{config.BOT_USERNAME}?start={outstr}")
+    
+    
+@Client.on_message(filters.command(['batch', 'pbatch']) & filters.create(allowed))
+async def gen_link_batch(bot, message):
+    if " " not in message.text:
+        return await message.reply("Use correct format.\nExample <code>/batch https://t.me/santhutech/1 https://t.me/santhutech/12</code>.")
+    links = message.text.strip().split(" ")
+    if len(links) != 3:
+        return await message.reply("Use correct format.\nExample <code>/batch https://t.me/santhutech/1 https://t.me/santhutech/12</code>.")
+    cmd, first, last = links
+    regex = re.compile("(https://)?(t\.me/|telegram\.me/|telegram\.dog/)(c/)?(\d+|[a-zA-Z_0-9]+)/(\d+)$")
+    match = regex.match(first)
+    if not match:
+        return await message.reply('Invalid link')
+    f_chat_id = match.group(4)
+    f_msg_id = int(match.group(5))
+    if f_chat_id.isnumeric():
+        f_chat_id  = int(("-100" + f_chat_id))
 
+    match = regex.match(last)
+    if not match:
+        return await message.reply('Invalid link')
+    l_chat_id = match.group(4)
+    l_msg_id = int(match.group(5))
+    if l_chat_id.isnumeric():
+        l_chat_id  = int(("-100" + l_chat_id))
 
-async def forward_to_channel(bot: Client, message: Message, editable: Message):
+    if f_chat_id != l_chat_id:
+        return await message.reply("Chat ids not matched.")
     try:
-        __SENT = await message.forward(Config.DB_CHANNEL)
-        return __SENT
-    except FloodWait as sl:
-        if sl.value > 45:
-            await asyncio.sleep(sl.value)
-            await bot.send_message(
-                chat_id=int(Config.LOG_CHANNEL),
-                text=f"#FloodWait:\nGot FloodWait of `{str(sl.value)}s` from `{str(editable.chat.id)}` !!",
-                disable_web_page_preview=True,
-                reply_markup=InlineKeyboardMarkup(
-                    [
-                        [InlineKeyboardButton("Ban User", callback_data=f"ban_user_{str(editable.chat.id)}")]
-                    ]
-                )
-            )
-        return await forward_to_channel(bot, message, editable)
+        chat_id = (await bot.get_chat(f_chat_id)).id
+    except ChannelInvalid:
+        return await message.reply('This may be a private channel / group. Make me an admin over there to index the files.')
+    except (UsernameInvalid, UsernameNotModified):
+        return await message.reply('Invalid Link specified.')
+    except Exception as e:
+        return await message.reply(f'Errors - {e}')
 
+    sts = await message.reply("Generating link for your message.\nThis may take time depending upon number of messages")
+    if chat_id in config.FILE_STORE_CHANNEL:
+        string = f"{f_msg_id}_{l_msg_id}_{chat_id}_{cmd.lower().strip()}"
+        b_64 = base64.urlsafe_b64encode(string.encode("ascii")).decode().strip("=")
+        return await sts.edit(f"Here is your link https://t.me/{config.BOT_USERNAME}?start=DSTORE-{b_64}")
 
-async def save_batch_media_in_channel(bot: Client, editable: Message, message_ids: list):
-    try:
-        message_ids_str = ""
-        for message in (await bot.get_messages(chat_id=editable.chat.id, message_ids=message_ids)):
-            sent_message = await forward_to_channel(bot, message, editable)
-            if sent_message is None:
-                continue
-            message_ids_str += f"{str(sent_message.id)} "
-            await asyncio.sleep(2)
-        SaveMessage = await bot.send_message(
-            chat_id=Config.DB_CHANNEL,
-            text=message_ids_str,
-            disable_web_page_preview=True,
-            reply_markup=InlineKeyboardMarkup([[
-                InlineKeyboardButton("Delete Batch", callback_data="closeMessage")
-            ]])
-        )
-        share_link = f"https://t.me/{Config.BOT_USERNAME}?start=AbirHasan2005_{str_to_b64(str(SaveMessage.id))}"
-        await editable.edit(
-            f"**Batch Files Stored in my Database!**\n\nHere is the Permanent Link of your files: {share_link} \n\n"
-            f"Just Click the link to get your files!",
-            reply_markup=InlineKeyboardMarkup(
-                [[InlineKeyboardButton("Open Link", url=share_link)],
-                 [InlineKeyboardButton("Bots Channel", url="https://t.me/Discovery_Updates"),
-                  InlineKeyboardButton("Support Group", url="https://t.me/JoinOT")]]
-            ),
-            disable_web_page_preview=True
-        )
-        await bot.send_message(
-            chat_id=int(Config.LOG_CHANNEL),
-            text=f"#BATCH_SAVE:\n\n[{editable.reply_to_message.from_user.first_name}](tg://user?id={editable.reply_to_message.from_user.id}) Got Batch Link!",
-            disable_web_page_preview=True,
-            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Open Link", url=share_link)]])
-        )
-    except Exception as err:
-        await editable.edit(f"Something Went Wrong!\n\n**Error:** `{err}`")
-        await bot.send_message(
-            chat_id=int(Config.LOG_CHANNEL),
-            text=f"#ERROR_TRACEBACK:\nGot Error from `{str(editable.chat.id)}` !!\n\n**Traceback:** `{err}`",
-            disable_web_page_preview=True,
-            reply_markup=InlineKeyboardMarkup(
-                [
-                    [InlineKeyboardButton("Ban User", callback_data=f"ban_user_{str(editable.chat.id)}")]
-                ]
-            )
-        )
+    FRMT = "Generating Link...\nTotal Messages: `{total}`\nDone: `{current}`\nRemaining: `{rem}`\nStatus: `{sts}`"
 
+    outlist = []
 
-async def save_media_in_channel(bot: Client, editable: Message, message: Message):
-    try:
-        forwarded_msg = await message.forward(Config.DB_CHANNEL)
-        file_er_id = str(forwarded_msg.id)
-        await forwarded_msg.reply_text(
-            f"#PRIVATE_FILE:\n\n[{message.from_user.first_name}](tg://user?id={message.from_user.id}) Got File Link!",
-            disable_web_page_preview=True)
-        share_link = f"https://t.me/{Config.BOT_USERNAME}?start=AbirHasan2005_{str_to_b64(file_er_id)}"
-        await editable.edit(
-            "**Your File Stored in my Database!**\n\n"
-            f"Here is the Permanent Link of your file: {share_link} \n\n"
-            "Just Click the link to get your file!",
-            reply_markup=InlineKeyboardMarkup(
-                [[InlineKeyboardButton("Open Link", url=share_link)],
-                 [InlineKeyboardButton("Bots Channel", url="https://t.me/Discovery_Updates"),
-                  InlineKeyboardButton("Support Group", url="https://t.me/JoinOT")]]
-            ),
-            disable_web_page_preview=True
-        )
-    except FloodWait as sl:
-        if sl.value > 45:
-            print(f"Sleep of {sl.value}s caused by FloodWait ...")
-            await asyncio.sleep(sl.value)
-            await bot.send_message(
-                chat_id=int(Config.LOG_CHANNEL),
-                text="#FloodWait:\n"
-                     f"Got FloodWait of `{str(sl.value)}s` from `{str(editable.chat.id)}` !!",
-                disable_web_page_preview=True,
-                reply_markup=InlineKeyboardMarkup(
-                    [
-                        [InlineKeyboardButton("Ban User", callback_data=f"ban_user_{str(editable.chat.id)}")]
-                    ]
-                )
-            )
-        await save_media_in_channel(bot, editable, message)
-    except Exception as err:
-        await editable.edit(f"Something Went Wrong!\n\n**Error:** `{err}`")
-        await bot.send_message(
-            chat_id=int(Config.LOG_CHANNEL),
-            text="#ERROR_TRACEBACK:\n"
-                 f"Got Error from `{str(editable.chat.id)}` !!\n\n"
-                 f"**Traceback:** `{err}`",
-            disable_web_page_preview=True,
-            reply_markup=InlineKeyboardMarkup(
-                [
-                    [InlineKeyboardButton("Ban User", callback_data=f"ban_user_{str(editable.chat.id)}")]
-                ]
-            )
-        )
+    # file store without db channel
+    og_msg = 0
+    tot = 0
+    async for msg in bot.iter_messages(f_chat_id, l_msg_id, f_msg_id):
+        tot += 1
+        if msg.empty or msg.service:
+            continue
+        if not msg.media:
+            # only media messages supported.
+            continue
+        try:
+            file_type = msg.media
+            file = getattr(msg, file_type.value)
+            caption = getattr(msg, 'caption', '')
+            if caption:
+                caption = caption.html
+            if file:
+                file = {
+                    "file_id": file.file_id,
+                    "caption": caption,
+                    "title": getattr(file, "file_name", ""),
+                    "size": file.file_size,
+                    "protect": cmd.lower().strip() == "/pbatch",
+                }
 
-async def reply_forward(message: Message, file_id: int):
-    try:
-        await message.reply_text(
-            f"**Here is Sharable Link of this file:**\n"
-            f"https://t.me/{Config.BOT_USERNAME}?start=AbirHasan2005_{str_to_b64(str(file_id))}\n\n"
-            f"__To Retrive the Stored File, just open the link!__",
-            disable_web_page_preview=True, quote=True)
-    except FloodWait as e:
-        await asyncio.sleep(e.value)
-        await reply_forward(message, file_id)
-
-async def media_forward(bot: Client, user_id: int, file_id: int):
-    try:
-        if Config.FORWARD_AS_COPY is True:
-            return await bot.copy_message(chat_id=user_id, from_chat_id=Config.DB_CHANNEL,
-                                          message_id=file_id)
-        elif Config.FORWARD_AS_COPY is False:
-            return await bot.forward_messages(chat_id=user_id, from_chat_id=Config.DB_CHANNEL,
-                                              message_ids=file_id)
-    except FloodWait as e:
-        await asyncio.sleep(e.value)
-        return media_forward(bot, user_id, file_id)
-
-async def send_media_and_reply(bot: Client, user_id: int, file_id: int):
-    sent_message = await media_forward(bot, user_id, file_id)
-    await reply_forward(message=sent_message, file_id=file_id)
-    await asyncio.sleep(2)
+                og_msg +=1
+                outlist.append(file)
+        except:
+            pass
+        if not og_msg % 20:
+            try:
+                await sts.edit(FRMT.format(total=l_msg_id-f_msg_id, current=tot, rem=((l_msg_id-f_msg_id) - tot), sts="Saving Messages"))
+            except:
+                pass
+    with open(f"batchmode_{message.from_user.id}.json", "w+") as out:
+        json.dump(outlist, out)
+    post = await bot.send_document(config.LOG_CHANNEL, f"batchmode_{message.from_user.id}.json", file_name="Batch.json", caption="⚠️Generated for filestore.")
+    os.remove(f"batchmode_{message.from_user.id}.json")
+    file_id, ref = unpack_new_file_id(post.document.file_id)
+    await sts.edit(f"Here is your link\nContains `{og_msg}` files.\n https://t.me/{config.BOT_USERNAME}?start=BATCH-{file_id}")
