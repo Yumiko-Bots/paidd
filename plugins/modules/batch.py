@@ -31,8 +31,7 @@ async def gen_link_s(bot, message):
     string += file_id
     outstr = base64.urlsafe_b64encode(string.encode("ascii")).decode().strip("=")
     await message.reply(f"Here is your Link:\nhttps://t.me/{config.BOT_USERNAME}?start={outstr}")
-    
-    
+
 @Client.on_message(filters.command(['batch', 'pbatch']) & filters.create(allowed))
 async def gen_link_batch(bot, message):
     if " " not in message.text:
@@ -69,7 +68,7 @@ async def gen_link_batch(bot, message):
     except Exception as e:
         return await message.reply(f'Errors - {e}')
 
-    sts = await message.reply("Generating link for your message.\nThis may take time depending upon number of messages")
+    sts = await message.reply("Generating link for your message.\nThis may take time depending upon the number of messages")
     if chat_id in config.FILE_STORE_CHANNEL:
         string = f"{f_msg_id}_{l_msg_id}_{chat_id}_{cmd.lower().strip()}"
         b_64 = base64.urlsafe_b64encode(string.encode("ascii")).decode().strip("=")
@@ -83,37 +82,37 @@ async def gen_link_batch(bot, message):
     og_msg = 0
     tot = 0
     messages = await corn.get_messages(f_chat_id, l_msg_id, f_msg_id)
-for msg in messages:
-    tot += 1
-    if msg.empty or msg.service:
-        continue
-    if not msg.media:
-        # only media messages supported.
-        continue
-    try:
-        file_type = msg.media
-        file = getattr(msg, file_type.value)
-        caption = getattr(msg, 'caption', '')
-        if caption:
-            caption = caption.html
-        if file:
-            file = {
-                "file_id": file.file_id,
-                "caption": caption,
-                "title": getattr(file, "file_name", ""),
-                "size": file.file_size,
-                "protect": cmd.lower().strip() == "/pbatch",
-            }
-
-            og_msg += 1
-            outlist.append(file)
-    except:
-        pass
-    if not og_msg % 20:
+    for msg in messages:
+        tot += 1
+        if msg.empty or msg.service:
+            continue
+        if not msg.media:
+            # only media messages supported.
+            continue
         try:
-            await sts.edit(FRMT.format(total=l_msg_id-f_msg_id, current=tot, rem=((l_msg_id-f_msg_id) - tot), sts="Saving Messages"))
+            file_type = msg.media
+            file = getattr(msg, file_type.value)
+            caption = getattr(msg, 'caption', '')
+            if caption:
+                caption = caption.html
+            if file:
+                file = {
+                    "file_id": file.file_id,
+                    "caption": caption,
+                    "title": getattr(file, "file_name", ""),
+                    "size": file.file_size,
+                    "protect": cmd.lower().strip() == "/pbatch",
+                }
+
+                og_msg += 1
+                outlist.append(file)
         except:
             pass
+        if not og_msg % 20:
+            try:
+                await sts.edit(FRMT.format(total=l_msg_id-f_msg_id, current=tot, rem=((l_msg_id-f_msg_id) - tot), sts="Saving Messages"))
+            except:
+                pass
     with open(f"batchmode_{message.from_user.id}.json", "w+") as out:
         json.dump(outlist, out)
     post = await bot.send_document(config.LOG_CHANNEL, f"batchmode_{message.from_user.id}.json", file_name="Batch.json", caption="⚠️Generated for filestore.")
