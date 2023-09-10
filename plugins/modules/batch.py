@@ -81,38 +81,42 @@ async def gen_link_batch(bot, message):
     # file store without db channel
     og_msg = 0
     tot = 0
-    messages = await corn.get_messages(f_chat_id, l_msg_id, f_msg_id)
-    for message in messages:
-        tot += 1
-        if message.empty or message.service:
-            continue
-        if not message.media:
-            # only media messages supported.
-            continue
-        try:
-            file_type = message.media
-            file = getattr(message, file_type.value)
-            caption = getattr(message, 'caption', '')
-            if caption:
-                caption = caption.html
-            if file:
-                file = {
-                    "file_id": file.file_id,
-                    "caption": caption,
-                    "title": getattr(file, "file_name", ""),
-                    "size": file.file_size,
-                    "protect": cmd.lower().strip() == "/pbatch",
-                }
-
-                og_msg += 1
-                outlist.append(file)
-        except:
-            pass
-        if not og_msg % 20:
+    try:
+        messages = await bot.get_messages(f_chat_id, l_msg_id, f_msg_id)
+        for message in messages:
+            tot += 1
+            if message.empty or message.service:
+                continue
+            if not message.media:
+                # only media messages supported.
+                continue
             try:
-                await sts.edit(FRMT.format(total=l_msg_id-f_msg_id, current=tot, rem=((l_msg_id-f_msg_id) - tot), sts="Saving Messages"))
+                file_type = message.media
+                file = getattr(message, file_type.value)
+                caption = getattr(message, 'caption', '')
+                if caption:
+                    caption = caption.html
+                if file:
+                    file = {
+                        "file_id": file.file_id,
+                        "caption": caption,
+                        "title": getattr(file, "file_name", ""),
+                        "size": file.file_size,
+                        "protect": cmd.lower().strip() == "/pbatch",
+                    }
+
+                    og_msg += 1
+                    outlist.append(file)
             except:
                 pass
+            if not og_msg % 20:
+                try:
+                    await sts.edit(FRMT.format(total=l_msg_id-f_msg_id, current=tot, rem=((l_msg_id-f_msg_id) - tot), sts="Saving Messages"))
+                except:
+                    pass
+    except Exception as e:
+        await message.reply(f'Error while fetching messages - {e}')
+    
     with open(f"batchmode_{message.from_user.id}.json", "w+") as out:
         json.dump(outlist, out)
     post = await bot.send_document(config.LOG_CHANNEL, f"batchmode_{message.from_user.id}.json", file_name="Batch.json", caption="⚠️Generated for filestore.")
