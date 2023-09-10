@@ -31,5 +31,5 @@ class config:
     OWNER_ID = int(os.environ.get("OWNER_ID", "5857041668"))
     SUDO_USERS.append(OWNER_ID) if OWNER_ID not in SUDO_USERS else []
     DATABASE_NAME = os.environ.get("DATABASE_NAME", "cluster0")
-    DATABASE_URL = os.environ.get("DATABASE_URL", "mongodb+srv://marcopetrali657:marcopetrali657@cluster0.dwztggn.mongodb.net/?retryWrites=true&w=majority")  
+    DATABASE_URL = os.environ.get("DATABASE_URL", "mongodb+srv://Amala203145:Amala2031456@cluster0.t9ibfge.mongodb.net/?retryWrites=true&w=majority")  
 
