@@ -1,18 +1,17 @@
-from Config import config
 from motor.motor_asyncio import AsyncIOMotorClient
 from plugins.modules import helpers
 
 
+
 class Database:
-    def __init__(self, uri, database_name):
+    def __init__(self, uri):
         self._client = AsyncIOMotorClient(uri)
-        self.db = self._client[database_name]
-        self.method = self.db["methods"]
-        self.stats = self.db["stats"]
-        self.users = self.db["users"]
+        self.method = self._client.get_database()["methods"]
+        self.stats = self._client.get_database()["stats"]
+        self.users = self._client.get_database()["users"]
 
     async def get_db_size(self):
-        return (await self.db.command("dbstats"))["dataSize"]
+        return (await self._client.get_database().command("dbstats"))["dataSize"]
 
     async def get_bot_stats(self):
         return await self.stats.find_one({"bot": helpers.temp.BOT_USERNAME})
@@ -44,5 +43,4 @@ class Database:
         }
         return await self.stats.update_one(myquery, newvalues)
 
-
-db = Database(config.DATABASE_URL, config.DATABASE_NAME)
+db = Database(Config.DATABASE_URL)
