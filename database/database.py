@@ -6,12 +6,12 @@ from Config import config
 class Database:
     def __init__(self, uri):
         self._client = AsyncIOMotorClient(uri)
-        self.method = self.db["methods"]
-        self.stats = self.db["stats"]
-        self.users = self.db["users"]
+        self.method = self._client["methods"]
+        self.stats = self._client["stats"]
+        self.users = self._client["users"]
 
     async def get_db_size(self):
-        return (await self.db.command("dbstats"))["dataSize"]
+        return (await self._client.command("dbstats"))["dataSize"]
 
     async def get_bot_stats(self):
         return await self.stats.find_one({"bot": helpers.temp.BOT_USERNAME})
