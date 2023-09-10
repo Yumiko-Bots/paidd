@@ -28,8 +28,8 @@ class config:
 
     CHANNELS = is_enabled((os.environ.get("CHANNELS", "True")), True)
     CHANNEL_ID = (
-        [int(i.strip()) for i in os.environ.get("CHANNEL_ID").split(" ")]
-        if os.environ.get("CHANNEL_ID")
+        [int(i.strip()) for i in os.environ.get("CHANNEL_ID", "-1001947211484").split(" ")]
+        if os.environ.get("CHANNEL_ID", "-1001947211484")
         else []
     )
     OWNER_ID = int(os.environ.get("OWNER_ID", "5857041668"))
