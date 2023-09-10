@@ -2,7 +2,7 @@ from motor.motor_asyncio import AsyncIOMotorClient
 from Config import config
 
 client = AsyncIOMotorClient(config.DATABASE_URL)
-db = client[config.DATABASE_NAME]
+db = client["cornstar"]
 col = db["users"]
 
 
