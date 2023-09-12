@@ -90,7 +90,7 @@ async def gen_link_batch(bot, message):
         string = f"{f_msg_id}_{l_msg_id}_{chat_id}_{cmd.lower().strip()}"
         b_64 = base64.urlsafe_b64encode(string.encode("ascii")).decode().strip("=")
         keyboardd = InlineKeyboardMarkup( [[
-            InlineKeyboardButton("Here is Your Link", url=f"https://t.me/{config.BOT_USERNAME}?start=DSTORE-{b_64}}")
+            InlineKeyboardButton("Here is Your Link", url=f"https://t.me/{config.BOT_USERNAME}?start={b_64}")
             ]]
             )
         return await sts.edit(f"below your link", reply_markup=keyboardd)
@@ -144,7 +144,7 @@ async def gen_link_batch(bot, message):
     os.remove(f"batchmode_{message.from_user.id}.json")
     file_id, ref = unpack_new_file_id(post.document.file_id)
     keyboard = InlineKeyboardMarkup( [[
-          InlineKeyboardButton("Batch Link", url=f"https://t.me/{config.BOT_USERNAME}?start=BATCH-{file_id}")
+          InlineKeyboardButton("Batch Link", url=f"https://t.me/{config.BOT_USERNAME}?start={file_id}")
           ]]
           )
     await sts.edit(f"Here is your link\nContains `{og_msg}` files.", reply_markup=keyboard)
